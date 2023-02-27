@@ -2,11 +2,15 @@ CREATE DATABASE `locadora_carloca` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLAT
 
 -- locadora_carloca.categoria_veiculo definition
 
-CREATE TABLE `categoria_veiculo` (
+-- locadora_carloca.categoria definition
+
+CREATE TABLE `categoria` (
   `ID` int NOT NULL AUTO_INCREMENT,
   `DESCRICAO` varchar(255) NOT NULL,
   PRIMARY KEY (`ID`)
 ) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- locadora_carloca.cliente definition
 
 -- locadora_carloca.cliente definition
 
@@ -18,7 +22,8 @@ CREATE TABLE `cliente` (
   `CPF` varchar(11) NOT NULL,
   `CNH` varchar(10) NOT NULL,
   `STATUS` enum('BLOQUEADO','LIBERADO') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'LIBERADO',
-  PRIMARY KEY (`ID`)
+  PRIMARY KEY (`ID`),
+  UNIQUE KEY `cliente_un` (`CPF`,`CNH`)
 ) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 
@@ -36,21 +41,45 @@ CREATE TABLE `filial` (
   PRIMARY KEY (`ID`)
 ) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+-- locadora_carloca.montadora definition
+
+CREATE TABLE `montadora` (
+  `ID` int NOT NULL AUTO_INCREMENT,
+  `NOME` varchar(100) NOT NULL,
+  PRIMARY KEY (`ID`),
+  UNIQUE KEY `montadora_un` (`NOME`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
 -- locadora_carloca.veiculo definition
 
 CREATE TABLE `veiculo` (
   `ID` int NOT NULL AUTO_INCREMENT,
+  `PLACA` varchar(7) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
   `ID_CATEGORIA` int NOT NULL,
-  `MONTADORA` varchar(100) NOT NULL,
+  `ID_MONTADORA` int NOT NULL,
   `VERSAO` varchar(100) NOT NULL,
+  `ANO` varchar(4) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
   `COR` enum('PRETO','PRATA','BRANCO') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
   `QUILOMETRAGEM` int NOT NULL,
   `STATUS` enum('BLOQUEADO','LIBERADO') NOT NULL DEFAULT 'LIBERADO',
   PRIMARY KEY (`ID`),
+  UNIQUE KEY `veiculo_un` (`PLACA`),
   KEY `veiculo_FK` (`ID_CATEGORIA`),
-  CONSTRAINT `veiculo_FK` FOREIGN KEY (`ID_CATEGORIA`) REFERENCES `categoria_veiculo` (`ID`)
+  KEY `veiculo_FK_1` (`ID_MONTADORA`),
+  CONSTRAINT `veiculo_FK` FOREIGN KEY (`ID_CATEGORIA`) REFERENCES `categoria` (`ID`),
+  CONSTRAINT `veiculo_FK_1` FOREIGN KEY (`ID_MONTADORA`) REFERENCES `montadora` (`ID`)
 ) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+-- locadora_carloca.filial_veiculo definition
+
+CREATE TABLE `filial_veiculo` (
+  `ID_FILIAL` int NOT NULL,
+  `ID_VEICULO` int NOT NULL,
+  UNIQUE KEY `filial_veiculo_un` (`ID_VEICULO`),
+  KEY `FILIAL_VEICULO_FK` (`ID_FILIAL`),
+  CONSTRAINT `FILIAL_VEICULO_FK` FOREIGN KEY (`ID_FILIAL`) REFERENCES `filial` (`ID`),
+  CONSTRAINT `FILIAL_VEICULO_FK_1` FOREIGN KEY (`ID_VEICULO`) REFERENCES `veiculo` (`ID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- locadora_carloca.reserva definition
 
@@ -58,10 +87,10 @@ CREATE TABLE `reserva` (
   `ID` int NOT NULL AUTO_INCREMENT,
   `MODALIDADE` enum('DIARIA') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'DIARIA',
   `ID_CLIENTE` int NOT NULL,
+  `FILIAL_RESERVA` int NOT NULL,
   `ID_VEICULO` int NOT NULL,
   `FILIAL_DESTINO` int NOT NULL,
-  `FILIAL_RESERVA` int NOT NULL,
-  `DATA_INICIO` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `DATA_INICIAL` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `DATA_FINAL` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `STATUS` enum('EM CURSO','CONCLUIDA') NOT NULL DEFAULT 'EM CURSO',
   `QUILOMETRAGEM_RODADA` int NOT NULL DEFAULT '0',
@@ -74,7 +103,8 @@ CREATE TABLE `reserva` (
   CONSTRAINT `reserva_FK_1` FOREIGN KEY (`ID_VEICULO`) REFERENCES `veiculo` (`ID`),
   CONSTRAINT `reserva_FK_2` FOREIGN KEY (`FILIAL_DESTINO`) REFERENCES `filial` (`ID`),
   CONSTRAINT `reserva_FK_3` FOREIGN KEY (`FILIAL_RESERVA`) REFERENCES `filial` (`ID`)
-) ENGINE=InnoDB AUTO_INCREMENT=15 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
 
 CREATE DEFINER=`root`@`localhost` TRIGGER `PREVENIR_LOCACAO` BEFORE INSERT ON `reserva` FOR EACH ROW BEGIN
 	if exists (select 1 from locadora_carloca.cliente c where new.ID_CLIENTE = ID and c.STATUS = 'BLOQUEADO') then 
